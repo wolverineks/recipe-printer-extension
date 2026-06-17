@@ -1,0 +1,164 @@
+@page {
+  size: letter;
+  margin: 0.75in;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  color: #111827;
+  background: #f3f4f6;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.toolbar button {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.recipe-card {
+  max-width: 8.5in;
+  margin: 0 auto;
+  padding: 0.5in 0.75in 0.75in;
+  background: #fff;
+}
+
+.recipe-header {
+  text-align: center;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #e67e22;
+  padding-bottom: 16px;
+}
+
+.recipe-header h1 {
+  margin: 0 0 8px;
+  font-size: 30px;
+  line-height: 1.2;
+}
+
+.description {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.meta {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 16px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.recipe-body {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 28px;
+}
+
+.column h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #e67e22;
+}
+
+#ingredients {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+#instructions {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+#instructions li + li {
+  margin-top: 8px;
+}
+
+.notes {
+  margin-top: 24px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.notes h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: #e67e22;
+}
+
+.notes p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.recipe-footer {
+  margin-top: 28px;
+  padding-top: 10px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.recipe-footer p {
+  margin: 0;
+}
+
+.error {
+  max-width: 8.5in;
+  margin: 24px auto;
+  padding: 16px;
+  color: #b91c1c;
+}
+
+.hidden {
+  display: none;
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .recipe-card {
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .recipe-body {
+    grid-template-columns: 1fr;
+  }
+}

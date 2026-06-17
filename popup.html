@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Recipe Printer</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="popup">
+      <header>
+        <h1>Recipe Printer</h1>
+        <p>Format the current page with Grok and print a clean copy.</p>
+      </header>
+
+      <div id="setup-warning" class="warning hidden">
+        <p>No API key found.</p>
+        <button id="open-options" type="button" class="link-btn">Open Settings</button>
+      </div>
+
+      <button id="print-btn" type="button" class="primary-btn">Format, Save &amp; Print</button>
+
+      <p id="status" class="status" aria-live="polite"></p>
+
+      <footer>
+        <button id="settings-link" type="button" class="link-btn">Settings</button>
+      </footer>
+    </main>
+    <script src="popup.js" type="module"></script>
+  </body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Print Recipe</title>
+    <link rel="stylesheet" href="print.css" />
+  </head>
+  <body>
+    <div class="toolbar no-print">
+      <button id="print-btn" type="button">Print</button>
+      <button id="close-btn" type="button">Close</button>
+    </div>
+
+    <article id="recipe" class="recipe-card hidden">
+      <header class="recipe-header">
+        <h1 id="title"></h1>
+        <p id="description" class="description"></p>
+        <ul id="meta" class="meta"></ul>
+      </header>
+
+      <section class="recipe-body">
+        <div class="column">
+          <h2>Ingredients</h2>
+          <ul id="ingredients"></ul>
+        </div>
+        <div class="column">
+          <h2>Instructions</h2>
+          <ol id="instructions"></ol>
+        </div>
+      </section>
+
+      <section id="notes-section" class="notes hidden">
+        <h2>Notes</h2>
+        <p id="notes"></p>
+      </section>
+
+      <footer class="recipe-footer">
+        <p id="source"></p>
+        <p id="printed-on"></p>
+      </footer>
+    </article>
+
+    <p id="error" class="error hidden"></p>
+    <script src="print.js"></script>
+  </body>
+</html>

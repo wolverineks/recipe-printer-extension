@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Recipe Printer Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main class="options">
+      <h1>Recipe Printer Settings</h1>
+      <p>
+        Get an API key from
+        <a href="https://console.x.ai/team/default/api-keys" target="_blank" rel="noreferrer">xAI Console</a>.
+      </p>
+
+      <form id="settings-form">
+        <label for="api-key">xAI API Key</label>
+        <input id="api-key" type="password" autocomplete="off" placeholder="xai-..." />
+
+        <label for="model">Grok Model</label>
+        <select id="model">
+          <option value="grok-4-1-fast">grok-4-1-fast (recommended)</option>
+          <option value="grok-4-fast">grok-4-fast</option>
+          <option value="grok-4">grok-4 (higher quality, slower)</option>
+        </select>
+
+        <h2>Umbrel Recipes</h2>
+        <p>
+          Optional. Install the <strong>Recipes</strong> app from your Wolverineks app store,
+          open Extension Settings inside the app, and copy the ingest token.
+        </p>
+
+        <label for="umbrel-url">Umbrel Recipes URL</label>
+        <input
+          id="umbrel-url"
+          type="url"
+          autocomplete="off"
+          placeholder="http://192.168.1.50:4020"
+        />
+
+        <label for="umbrel-token">Ingest API Token</label>
+        <input
+          id="umbrel-token"
+          type="password"
+          autocomplete="off"
+          placeholder="Paste token from Recipes app"
+        />
+
+        <button type="submit" class="primary-btn">Save</button>
+      </form>
+
+      <p id="save-status" class="status" aria-live="polite"></p>
+    </main>
+    <script src="options.js"></script>
+  </body>
+</html>
