@@ -103,7 +103,7 @@ async function handlePrint() {
 async function loadUmbrelHint() {
   const status = await chrome.runtime.sendMessage({ type: "GET_UMBREL_STATUS" });
   if (!status?.configured) {
-    umbrelHint.textContent = "Tip: add your Umbrel URL + ingest token in Settings to auto-save recipes.";
+    umbrelHint.textContent = "Tip: in the Recipes app click Add new device, then paste URL + token into extension Settings.";
     umbrelHint.classList.remove("hidden");
     return;
   }
