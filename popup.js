@@ -73,7 +73,11 @@ async function handlePrint() {
     }
 
     setStatus("Saving to Umbrel…");
-    const saved = await saveToUmbrel(formatted.data);
+    const recipeForUmbrel = {
+      ...formatted.data,
+      ...(extracted.data.image_url ? { image_url: extracted.data.image_url } : {}),
+    };
+    const saved = await saveToUmbrel(recipeForUmbrel);
     let keepOpen = false;
 
     if (saved?.ok) {

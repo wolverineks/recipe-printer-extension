@@ -109,6 +109,75 @@ function truncate(text, max = MAX_TEXT_LENGTH) {
   return `${text.slice(0, max)}\n\n[truncated]`;
 }
 
+function absolutizeUrl(value, baseUrl) {
+  if (!value || typeof value !== "string") return null;
+  try {
+    return new URL(value, baseUrl).href;
+  } catch {
+    return null;
+  }
+}
+
+function resolveImageUrl(value, baseUrl) {
+  if (!value) return null;
+  if (typeof value === "string") return absolutizeUrl(value, baseUrl);
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const url = resolveImageUrl(item, baseUrl);
+      if (url) return url;
+    }
+    return null;
+  }
+  if (typeof value === "object") {
+    return resolveImageUrl(value.url || value.contentUrl || value["@id"], baseUrl);
+  }
+  return null;
+}
+
+function extractImageUrl(jsonLd) {
+  const baseUrl = window.location.href;
+
+  if (jsonLd?.image) {
+    const url = resolveImageUrl(jsonLd.image, baseUrl);
+    if (url && !url.startsWith("data:")) return url;
+  }
+
+  const microRoot = document.querySelector('[itemtype*="schema.org/Recipe"]');
+  const microImage = microRoot?.querySelector('[itemprop="image"]');
+  if (microImage) {
+    const candidate =
+      microImage.getAttribute("src") ||
+      microImage.getAttribute("content") ||
+      microImage.getAttribute("href");
+    const url = absolutizeUrl(candidate, baseUrl);
+    if (url && !url.startsWith("data:")) return url;
+  }
+
+  const ogImage = document.querySelector('meta[property="og:image"]')?.content;
+  const urlFromOg = absolutizeUrl(ogImage, baseUrl);
+  if (urlFromOg && !urlFromOg.startsWith("data:")) return urlFromOg;
+
+  const twitterImage = document.querySelector('meta[name="twitter:image"]')?.content;
+  const urlFromTwitter = absolutizeUrl(twitterImage, baseUrl);
+  if (urlFromTwitter && !urlFromTwitter.startsWith("data:")) return urlFromTwitter;
+
+  const main = pickMainElement();
+  for (const img of main?.querySelectorAll("img[src]") || []) {
+    const src = img.getAttribute("src");
+    const url = absolutizeUrl(src, baseUrl);
+    if (!url || url.startsWith("data:")) continue;
+    const width = img.naturalWidth || img.width || 0;
+    const height = img.naturalHeight || img.height || 0;
+    if (width >= 200 && height >= 150) return url;
+  }
+
+  const fallbackImg = main?.querySelector("img[src]");
+  const fallbackUrl = absolutizeUrl(fallbackImg?.getAttribute("src"), baseUrl);
+  if (fallbackUrl && !fallbackUrl.startsWith("data:")) return fallbackUrl;
+
+  return null;
+}
+
 function serializeJsonLd(recipe) {
   if (!recipe) return "";
   const fields = [
@@ -198,6 +267,7 @@ function extractRecipe() {
       jsonLd,
       text,
       extractionMethod,
+      image_url: extractImageUrl(jsonLd),
     },
   };
 }
