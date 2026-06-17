@@ -1,16 +1,7 @@
 import { RECIPE_JSON_SCHEMA, SYSTEM_PROMPT } from "./recipe-schema.js";
+import { hasUmbrelPermission, normalizeUmbrelUrl } from "./umbrel-client.js";
 
 const DEFAULT_MODEL = "grok-4-1-fast";
-
-function normalizeUmbrelUrl(value) {
-  let trimmed = (value || "").trim().replace(/\/+$/, "");
-  if (!trimmed) return "";
-  trimmed = trimmed.replace(/\/api\/ingest$/i, "");
-  if (!/^https?:\/\//i.test(trimmed)) {
-    trimmed = `http://${trimmed}`;
-  }
-  return trimmed.replace(/\/+$/, "");
-}
 
 async function getSettings() {
   const { apiKey, model, umbrelUrl, umbrelToken } = await chrome.storage.local.get([
@@ -19,22 +10,14 @@ async function getSettings() {
     "umbrelUrl",
     "umbrelToken",
   ]);
+  const normalized = normalizeUmbrelUrl(umbrelUrl || "");
   return {
     apiKey: apiKey || "",
     model: model || DEFAULT_MODEL,
-    umbrelUrl: normalizeUmbrelUrl(umbrelUrl),
+    umbrelUrl: normalized.url,
+    umbrelUrlError: normalized.error,
     umbrelToken: (umbrelToken || "").trim(),
   };
-}
-
-async function hasUmbrelPermission(umbrelUrl) {
-  if (!umbrelUrl) return false;
-  try {
-    const origin = new URL(umbrelUrl).origin;
-    return chrome.permissions.contains({ origins: [`${origin}/*`] });
-  } catch {
-    return false;
-  }
 }
 
 function buildUserPrompt(raw) {
@@ -105,15 +88,18 @@ async function formatRecipe(rawData) {
 }
 
 async function saveToUmbrel(recipe) {
-  const { umbrelUrl, umbrelToken } = await getSettings();
+  const { umbrelUrl, umbrelUrlError, umbrelToken } = await getSettings();
 
   if (!umbrelUrl && !umbrelToken) {
     return { ok: false, skipped: true, reason: "not_configured" };
   }
+  if (umbrelUrlError) {
+    return { ok: false, error: umbrelUrlError };
+  }
   if (!umbrelUrl || !umbrelToken) {
     return {
       ok: false,
-      error: "Umbrel is partially configured. Add both URL and ingest token in extension Settings.",
+      error: "Umbrel is partially configured. Add both URL (with :4020) and ingest token in extension Settings.",
     };
   }
 

@@ -1,3 +1,10 @@
+import {
+  hasUmbrelPermission,
+  normalizeUmbrelUrl,
+  requestUmbrelPermission,
+  testUmbrelConnection,
+} from "./umbrel-client.js";
+
 const form = document.getElementById("settings-form");
 const apiKeyInput = document.getElementById("api-key");
 const modelSelect = document.getElementById("model");
@@ -7,91 +14,35 @@ const saveStatus = document.getElementById("save-status");
 const umbrelStatus = document.getElementById("umbrel-status");
 const testUmbrelBtn = document.getElementById("test-umbrel-btn");
 
-function normalizeUmbrelUrl(value) {
-  let trimmed = value.trim().replace(/\/+$/, "");
-  if (!trimmed) return "";
-  trimmed = trimmed.replace(/\/api\/ingest$/i, "");
-  if (!/^https?:\/\//i.test(trimmed)) {
-    trimmed = `http://${trimmed}`;
-  }
-  return trimmed.replace(/\/+$/, "");
-}
-
-function umbrelOrigin(url) {
-  return new URL(url).origin;
-}
-
-async function requestUmbrelPermission(url) {
-  if (!url) return true;
-  const pattern = `${umbrelOrigin(url)}/*`;
-  if (await chrome.permissions.contains({ origins: [pattern] })) return true;
-  return chrome.permissions.request({ origins: [pattern] });
-}
-
-async function hasUmbrelPermission(url) {
-  if (!url) return false;
-  try {
-    return chrome.permissions.contains({ origins: [`${umbrelOrigin(url)}/*`] });
-  } catch {
-    return false;
-  }
-}
-
-async function testUmbrelConnection(umbrelUrl, umbrelToken) {
-  if (!umbrelUrl || !umbrelToken) {
-    return { ok: false, error: "Enter both Umbrel URL and ingest token first." };
-  }
-
-  const permitted = await hasUmbrelPermission(umbrelUrl);
-  if (!permitted) {
-    return {
-      ok: false,
-      error: "Chrome has not been allowed to access your Umbrel URL. Click Save and approve the permission prompt.",
-    };
-  }
-
-  try {
-    const response = await fetch(`${umbrelUrl}/api/ping`, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${umbrelToken}` },
-    });
-    if (response.status === 401) {
-      return { ok: false, error: "Invalid ingest token. Copy a fresh token from the Recipes app." };
-    }
-    if (!response.ok) {
-      const body = await response.text();
-      return { ok: false, error: `Umbrel responded with ${response.status}: ${body.slice(0, 120)}` };
-    }
-    return { ok: true };
-  } catch (error) {
-    return {
-      ok: false,
-      error: error?.message || "Could not reach Umbrel. Check the URL and that the Recipes app is running.",
-    };
-  }
-}
-
 function setUmbrelStatus(message, type = "") {
   umbrelStatus.textContent = message;
   umbrelStatus.className = `umbrel-status${type ? ` ${type}` : ""}`;
 }
 
 async function refreshUmbrelStatus() {
-  const umbrelUrl = normalizeUmbrelUrl(umbrelUrlInput.value);
+  const normalized = normalizeUmbrelUrl(umbrelUrlInput.value);
   const umbrelToken = umbrelTokenInput.value.trim();
 
-  if (!umbrelUrl && !umbrelToken) {
+  if (normalized.error) {
+    setUmbrelStatus(normalized.error, "error");
+    return;
+  }
+
+  if (!normalized.url && !umbrelToken) {
     setUmbrelStatus("Umbrel save is optional. Add URL + token to auto-save recipes.");
     return;
   }
-  if (!umbrelUrl || !umbrelToken) {
-    setUmbrelStatus("Add both Umbrel URL and ingest token, then click Save.", "error");
+  if (!normalized.url || !umbrelToken) {
+    setUmbrelStatus("Add both Umbrel URL (with :4020) and ingest token, then click Save.", "error");
     return;
   }
 
-  const permitted = await hasUmbrelPermission(umbrelUrl);
+  const permitted = await hasUmbrelPermission(normalized.url);
   if (!permitted) {
-    setUmbrelStatus("Saved values detected, but Chrome network access is not granted yet. Click Save and allow access.", "error");
+    setUmbrelStatus(
+      "Saved values detected, but Chrome network access is not granted yet. Click Save and allow access.",
+      "error"
+    );
     return;
   }
 
@@ -119,9 +70,16 @@ form.addEventListener("submit", async (event) => {
 
   const apiKey = apiKeyInput.value.trim();
   const model = modelSelect.value;
-  const umbrelUrl = normalizeUmbrelUrl(umbrelUrlInput.value);
+  const normalized = normalizeUmbrelUrl(umbrelUrlInput.value);
   const umbrelToken = umbrelTokenInput.value.trim();
 
+  if (normalized.error) {
+    saveStatus.className = "status error";
+    saveStatus.textContent = normalized.error;
+    return;
+  }
+
+  const umbrelUrl = normalized.url;
   umbrelUrlInput.value = umbrelUrl;
 
   await chrome.storage.local.set({
@@ -135,7 +93,8 @@ form.addEventListener("submit", async (event) => {
   if (umbrelUrl) {
     const granted = await requestUmbrelPermission(umbrelUrl);
     if (!granted) {
-      saveMessage = "Settings saved, but Chrome blocked Umbrel network access. Click Save again and choose Allow.";
+      saveMessage =
+        "Settings saved, but Chrome blocked Umbrel network access. Click Save again and choose Allow.";
       saveStatus.className = "status error";
     }
   }
@@ -145,19 +104,31 @@ form.addEventListener("submit", async (event) => {
 });
 
 testUmbrelBtn.addEventListener("click", async () => {
-  const umbrelUrl = normalizeUmbrelUrl(umbrelUrlInput.value);
+  const normalized = normalizeUmbrelUrl(umbrelUrlInput.value);
   const umbrelToken = umbrelTokenInput.value.trim();
-  umbrelUrlInput.value = umbrelUrl;
 
-  await chrome.storage.local.set({ umbrelUrl, umbrelToken });
+  if (normalized.error) {
+    setUmbrelStatus(normalized.error, "error");
+    return;
+  }
 
-  if (umbrelUrl) {
-    await requestUmbrelPermission(umbrelUrl);
+  umbrelUrlInput.value = normalized.url;
+  await chrome.storage.local.set({
+    umbrelUrl: normalized.url,
+    umbrelToken,
+  });
+
+  if (normalized.url) {
+    await requestUmbrelPermission(normalized.url);
   }
 
   setUmbrelStatus("Testing connection…");
-  const result = await testUmbrelConnection(umbrelUrl, umbrelToken);
+  const result = await testUmbrelConnection(normalized.url, umbrelToken);
   if (result.ok) {
+    if (result.url && result.url !== normalized.url) {
+      umbrelUrlInput.value = result.url;
+      await chrome.storage.local.set({ umbrelUrl: result.url });
+    }
     setUmbrelStatus("Umbrel connection successful.", "ok");
   } else {
     setUmbrelStatus(result.error, "error");

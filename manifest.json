@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Recipe Printer",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Extract a recipe from the current page, format it with Grok, save to Umbrel, and print a clean copy.",
   "permissions": ["activeTab", "storage", "scripting"],
   "host_permissions": ["https://api.x.ai/*"],
