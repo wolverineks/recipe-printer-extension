@@ -14,7 +14,7 @@
         <a href="https://console.x.ai/team/default/api-keys" target="_blank" rel="noreferrer">xAI Console</a>.
       </p>
 
-      <form id="settings-form">
+      <form id="settings-form" novalidate>
         <label for="api-key">xAI API Key</label>
         <input id="api-key" type="password" autocomplete="off" placeholder="xai-..." />
 
@@ -27,29 +27,36 @@
 
         <h2>Umbrel Recipes</h2>
         <p>
-          Optional. Install the <strong>Recipes</strong> app from your Wolverineks app store,
-          open Extension Settings inside the app, and copy the ingest token.
+          Copy the URL and ingest token from the <strong>Recipes</strong> app
+          (shown at the top of the page). Example URL:
+          <code>http://192.168.1.50:4020</code>
         </p>
 
         <label for="umbrel-url">Umbrel Recipes URL</label>
         <input
           id="umbrel-url"
-          type="url"
+          type="text"
           autocomplete="off"
+          spellcheck="false"
           placeholder="http://192.168.1.50:4020"
         />
 
         <label for="umbrel-token">Ingest API Token</label>
         <input
           id="umbrel-token"
-          type="password"
+          type="text"
           autocomplete="off"
+          spellcheck="false"
           placeholder="Paste token from Recipes app"
         />
 
-        <button type="submit" class="primary-btn">Save</button>
+        <div class="button-row">
+          <button type="submit" class="primary-btn">Save</button>
+          <button id="test-umbrel-btn" type="button" class="secondary-btn">Test Umbrel connection</button>
+        </div>
       </form>
 
+      <p id="umbrel-status" class="umbrel-status" aria-live="polite"></p>
       <p id="save-status" class="status" aria-live="polite"></p>
     </main>
     <script src="options.js"></script>

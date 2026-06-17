@@ -1,5 +1,6 @@
 const printBtn = document.getElementById("print-btn");
 const statusEl = document.getElementById("status");
+const umbrelHint = document.getElementById("umbrel-hint");
 const setupWarning = document.getElementById("setup-warning");
 const openOptionsBtn = document.getElementById("open-options");
 const settingsLink = document.getElementById("settings-link");
@@ -73,18 +74,25 @@ async function handlePrint() {
 
     setStatus("Saving to Umbrel…");
     const saved = await saveToUmbrel(formatted.data);
+    let keepOpen = false;
+
     if (saved?.ok) {
       setStatus("Saved to Umbrel. Opening print preview…");
     } else if (saved?.skipped) {
-      setStatus("Opening print preview…");
+      setStatus("Umbrel not configured. Printing without saving…");
+      keepOpen = true;
     } else {
-      setStatus(`${saved?.error || "Umbrel save failed."} Opening print preview…`, true);
+      setStatus(`${saved?.error || "Umbrel save failed."} Printing anyway…`, true);
+      keepOpen = true;
     }
 
     await openPrintPage(formatted.data);
-    if (!saved?.error) {
-      setStatus(saved?.ok ? "Saved and ready to print." : "Ready to print.");
+
+    if (keepOpen) {
+      printBtn.disabled = false;
+      return;
     }
+
     window.close();
   } catch (err) {
     setStatus(err.message || "Something went wrong.", true);
@@ -92,11 +100,28 @@ async function handlePrint() {
   }
 }
 
+async function loadUmbrelHint() {
+  const status = await chrome.runtime.sendMessage({ type: "GET_UMBREL_STATUS" });
+  if (!status?.configured) {
+    umbrelHint.textContent = "Tip: add your Umbrel URL + ingest token in Settings to auto-save recipes.";
+    umbrelHint.classList.remove("hidden");
+    return;
+  }
+  if (!status.permitted) {
+    umbrelHint.textContent = "Umbrel is configured but Chrome network access is not allowed yet. Open Settings, click Save, and choose Allow.";
+    umbrelHint.classList.remove("hidden");
+    return;
+  }
+  umbrelHint.classList.add("hidden");
+}
+
 async function init() {
   const { apiKey } = await chrome.storage.local.get("apiKey");
   const hasKey = Boolean(apiKey?.trim());
   setupWarning.classList.toggle("hidden", hasKey);
   printBtn.disabled = !hasKey;
+
+  await loadUmbrelHint();
 
   openOptionsBtn.addEventListener("click", openOptions);
   settingsLink.addEventListener("click", openOptions);

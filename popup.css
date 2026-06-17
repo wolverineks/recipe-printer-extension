@@ -61,6 +61,17 @@ header p {
   margin: 0 0 6px;
 }
 
+.umbrel-hint {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fff4e5;
+  border: 1px solid #f5c78b;
+  font-size: 12px;
+  color: #7c4a03;
+  line-height: 1.4;
+}
+
 .status {
   min-height: 18px;
   margin: 10px 0 0;

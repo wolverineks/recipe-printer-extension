@@ -57,24 +57,59 @@ select {
   font-size: 14px;
 }
 
-.primary-btn {
+.button-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
   margin-top: 8px;
+}
+
+.primary-btn,
+.secondary-btn {
   border: none;
   border-radius: 8px;
   padding: 11px 14px;
   font-size: 14px;
   font-weight: 600;
+  cursor: pointer;
+}
+
+.primary-btn {
   color: #fff;
   background: #e67e22;
-  cursor: pointer;
 }
 
 .primary-btn:hover {
   background: #d35400;
 }
 
+.secondary-btn {
+  color: #1f2937;
+  background: #fff;
+  border: 1px solid #d1d5db;
+}
+
+.secondary-btn:hover {
+  background: #f9fafb;
+}
+
 .status {
   margin-top: 12px;
   font-size: 13px;
+  color: #047857;
+}
+
+.umbrel-status {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.umbrel-status.error,
+.status.error {
+  color: #b91c1c;
+}
+
+.umbrel-status.ok {
   color: #047857;
 }
