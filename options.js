@@ -12,6 +12,7 @@ const umbrelTokenInput = document.getElementById("umbrel-token");
 const saveStatus = document.getElementById("save-status");
 const umbrelStatus = document.getElementById("umbrel-status");
 const testUmbrelBtn = document.getElementById("test-umbrel-btn");
+const openRecipesBtn = document.getElementById("open-recipes-btn");
 
 function setUmbrelStatus(message, type = "") {
   umbrelStatus.textContent = message;
@@ -120,6 +121,19 @@ form.addEventListener("submit", async (event) => {
 
   saveStatus.textContent = saveMessage;
   await refreshUmbrelStatus();
+});
+
+openRecipesBtn.addEventListener("click", async () => {
+  const normalized = normalizeUmbrelUrl(umbrelUrlInput.value);
+  if (normalized.error) {
+    setUmbrelStatus(normalized.error, "error");
+    return;
+  }
+  if (!normalized.url) {
+    setUmbrelStatus("Enter the Umbrel Recipes URL first.", "error");
+    return;
+  }
+  await chrome.tabs.create({ url: normalized.url });
 });
 
 testUmbrelBtn.addEventListener("click", async () => {

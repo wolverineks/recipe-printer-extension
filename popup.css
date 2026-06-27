@@ -108,9 +108,11 @@ header p {
   display: none;
 }
 
-footer {
+.popup-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-top: 12px;
-  text-align: right;
 }
 
 .link-btn {

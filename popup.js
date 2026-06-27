@@ -1,9 +1,12 @@
+import { normalizeUmbrelUrl } from "./umbrel-client.js";
+
 const saveLaterBtn = document.getElementById("save-later-btn");
 const savePrintBtn = document.getElementById("save-print-btn");
 const statusEl = document.getElementById("status");
 const umbrelHint = document.getElementById("umbrel-hint");
 const setupWarning = document.getElementById("setup-warning");
 const openOptionsBtn = document.getElementById("open-options");
+const openRecipesBtn = document.getElementById("open-recipes");
 const settingsLink = document.getElementById("settings-link");
 
 const actionButtons = [saveLaterBtn, savePrintBtn];
@@ -21,6 +24,21 @@ function setButtonsDisabled(disabled) {
 
 function openOptions() {
   chrome.runtime.openOptionsPage();
+}
+
+async function openRecipesApp() {
+  const { umbrelUrl } = await chrome.storage.local.get("umbrelUrl");
+  const normalized = normalizeUmbrelUrl(umbrelUrl);
+  if (normalized.error) {
+    setStatus(normalized.error, true);
+    return;
+  }
+  if (!normalized.url) {
+    setStatus("Add your Umbrel Recipes URL in Settings first.", true);
+    openOptions();
+    return;
+  }
+  await chrome.tabs.create({ url: normalized.url });
 }
 
 async function ensureContentScript(tabId) {
@@ -204,6 +222,7 @@ async function init() {
   await loadUmbrelHint();
 
   openOptionsBtn.addEventListener("click", openOptions);
+  openRecipesBtn.addEventListener("click", openRecipesApp);
   settingsLink.addEventListener("click", openOptions);
   saveLaterBtn.addEventListener("click", () => processRecipe({ shouldPrint: false }));
   savePrintBtn.addEventListener("click", () => processRecipe({ shouldPrint: true }));
