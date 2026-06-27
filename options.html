@@ -10,28 +10,11 @@
     <main class="options">
       <h1>Recipe Printer Settings</h1>
       <p>
-        Get an API key from
-        <a href="https://console.x.ai/team/default/api-keys" target="_blank" rel="noreferrer">xAI Console</a>.
+        Connect this browser to your Umbrel <strong>Recipes</strong> app. The xAI API key and Grok
+        model are saved in Recipes under <strong>Add new device</strong>, not in the extension.
       </p>
 
       <form id="settings-form" novalidate>
-        <label for="api-key">xAI API Key</label>
-        <input id="api-key" type="password" autocomplete="off" placeholder="xai-..." />
-
-        <label for="model">Grok Model</label>
-        <select id="model">
-          <option value="grok-4-1-fast">grok-4-1-fast (recommended)</option>
-          <option value="grok-4-fast">grok-4-fast</option>
-          <option value="grok-4">grok-4 (higher quality, slower)</option>
-        </select>
-
-        <h2>Umbrel Recipes</h2>
-        <p>
-          In the Umbrel <strong>Recipes</strong> app, click <strong>Add new device</strong>
-          and copy the URL + token (or use “Copy all for extension”). Example URL:
-          <code>http://192.168.1.50:4020</code>
-        </p>
-
         <label for="umbrel-url">Umbrel Recipes URL</label>
         <input
           id="umbrel-url"

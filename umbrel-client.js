@@ -80,6 +80,124 @@ async function tryIngestProbe(umbrelUrl, umbrelToken) {
   return { kind: "http_error", status: response.status, body: await response.text() };
 }
 
+export async function fetchExtensionConfig(umbrelUrl, umbrelToken) {
+  const normalized = normalizeUmbrelUrl(umbrelUrl);
+  if (normalized.error) {
+    return { ok: false, error: normalized.error };
+  }
+  if (!normalized.url || !umbrelToken?.trim()) {
+    return { ok: false, skipped: true };
+  }
+
+  const permitted = await hasUmbrelPermission(normalized.url);
+  if (!permitted) {
+    return {
+      ok: false,
+      error:
+        "Chrome has not been allowed to access your Umbrel URL. Open extension Settings, click Save, and allow access.",
+    };
+  }
+
+  try {
+    const response = await fetch(`${normalized.url}/api/settings/extension-config`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${umbrelToken.trim()}` },
+    });
+
+    if (response.status === 401) {
+      return { ok: false, error: "Invalid ingest token. Copy a fresh token from the Recipes app." };
+    }
+    if (response.status === 404) {
+      return { ok: false, not_configured: true };
+    }
+    if (!response.ok) {
+      const body = await response.text();
+      return {
+        ok: false,
+        error: `Could not load extension settings (${response.status}): ${body.slice(0, 160)}`,
+      };
+    }
+
+    const payload = await response.json();
+    const apiKey = String(payload.api_key || "").trim();
+    if (!apiKey) {
+      return { ok: false, not_configured: true };
+    }
+    return {
+      ok: true,
+      api_key: apiKey,
+      model: payload.model || "grok-4-1-fast",
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error?.message ||
+        "Could not reach your Umbrel Recipes app to load extension settings.",
+    };
+  }
+}
+
+export async function checkRecipeBlocked(umbrelUrl, umbrelToken, sourceUrl) {
+  const normalized = normalizeUmbrelUrl(umbrelUrl);
+  const trimmedUrl = String(sourceUrl || "").trim();
+  if (!trimmedUrl) {
+    return { blocked: false };
+  }
+  if (normalized.error) {
+    return { blocked: false, error: normalized.error };
+  }
+  if (!normalized.url || !umbrelToken?.trim()) {
+    return { blocked: false, skipped: true };
+  }
+
+  const permitted = await hasUmbrelPermission(normalized.url);
+  if (!permitted) {
+    return {
+      blocked: false,
+      error:
+        "Chrome has not been allowed to access your Umbrel URL. Open extension Settings, click Save, and allow access.",
+    };
+  }
+
+  try {
+    const response = await fetch(`${normalized.url}/api/blocklist/check`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${umbrelToken.trim()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ source_url: trimmedUrl }),
+    });
+
+    if (response.status === 401) {
+      return { blocked: false, error: "Invalid ingest token. Copy a fresh token from the Recipes app." };
+    }
+
+    const payload = await response.json();
+    if (payload?.blocked) {
+      return {
+        blocked: true,
+        title: payload.title || null,
+        error:
+          payload.error ||
+          (payload.title
+            ? `“${payload.title}” is on your blocklist. Unblock it in the Recipes app to save or print it again.`
+            : "This recipe is on your blocklist. Unblock it in the Recipes app to save or print it again."),
+      };
+    }
+
+    return { blocked: false };
+  } catch (error) {
+    return {
+      blocked: false,
+      error:
+        error?.message ||
+        "Could not reach your Umbrel Recipes app to check the blocklist. Check the URL and that the app is running.",
+    };
+  }
+}
+
 export async function testUmbrelConnection(umbrelUrl, umbrelToken) {
   const normalized = normalizeUmbrelUrl(umbrelUrl);
   if (normalized.error) {

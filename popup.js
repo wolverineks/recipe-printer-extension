@@ -32,11 +32,27 @@ async function formatWithGrok(rawData) {
   });
 }
 
+async function checkBlocked(sourceUrl) {
+  return chrome.runtime.sendMessage({
+    type: "CHECK_RECIPE_BLOCKED",
+    sourceUrl,
+  });
+}
+
 async function saveToUmbrel(recipe) {
   return chrome.runtime.sendMessage({
     type: "SAVE_TO_UMBREL",
     recipe,
   });
+}
+
+function blockedStatusMessage(result) {
+  return (
+    result?.error ||
+    (result?.title
+      ? `“${result.title}” is on your blocklist. Unblock it in the Recipes app to save or print it again.`
+      : "This recipe is on your blocklist. Unblock it in the Recipes app to save or print it again.")
+  );
 }
 
 async function openPrintPage(recipe) {
@@ -65,6 +81,17 @@ async function handlePrint() {
       throw new Error(extracted?.error || "Could not extract recipe content.");
     }
 
+    setStatus("Checking blocklist…");
+    const blockCheck = await checkBlocked(extracted.data.url);
+    if (blockCheck?.blocked) {
+      setStatus(blockedStatusMessage(blockCheck), true);
+      printBtn.disabled = false;
+      return;
+    }
+    if (blockCheck?.error) {
+      throw new Error(blockCheck.error);
+    }
+
     setStatus("Formatting with Grok…");
     const formatted = await formatWithGrok(extracted.data);
 
@@ -79,6 +106,12 @@ async function handlePrint() {
     };
     const saved = await saveToUmbrel(recipeForUmbrel);
     let keepOpen = false;
+
+    if (saved?.blocked) {
+      setStatus(blockedStatusMessage(saved), true);
+      printBtn.disabled = false;
+      return;
+    }
 
     if (saved?.ok) {
       setStatus("Saved to Umbrel. Opening print preview…");
@@ -120,9 +153,18 @@ async function loadUmbrelHint() {
 }
 
 async function init() {
-  const { apiKey } = await chrome.storage.local.get("apiKey");
-  const hasKey = Boolean(apiKey?.trim());
+  const status = await chrome.runtime.sendMessage({ type: "GET_EXTENSION_STATUS" });
+  const hasKey = Boolean(status?.hasApiKey);
   setupWarning.classList.toggle("hidden", hasKey);
+  if (!hasKey) {
+    const warningText = setupWarning.querySelector("p");
+    if (warningText) {
+      warningText.textContent = status?.umbrelConfigured
+        ? status?.configError ||
+          "No xAI API key saved in the Recipes app. Add one under Add new device."
+        : "Connect Umbrel in extension Settings, then save the xAI API key in Recipes → Add new device.";
+    }
+  }
   printBtn.disabled = !hasKey;
 
   await loadUmbrelHint();

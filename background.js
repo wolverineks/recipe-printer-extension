@@ -1,22 +1,49 @@
 import { RECIPE_JSON_SCHEMA, SYSTEM_PROMPT } from "./recipe-schema.js";
-import { hasUmbrelPermission, normalizeUmbrelUrl } from "./umbrel-client.js";
+import {
+  checkRecipeBlocked,
+  fetchExtensionConfig,
+  hasUmbrelPermission,
+  normalizeUmbrelUrl,
+} from "./umbrel-client.js";
 
 const DEFAULT_MODEL = "grok-4-1-fast";
 
+async function resolveApiCredentials(umbrelUrl, umbrelToken) {
+  let apiKey = "";
+  let model = DEFAULT_MODEL;
+  let umbrelHasApiKey = false;
+  let configError = null;
+
+  if (umbrelUrl && umbrelToken) {
+    const remote = await fetchExtensionConfig(umbrelUrl, umbrelToken);
+    if (remote.ok && remote.api_key) {
+      apiKey = remote.api_key;
+      model = remote.model || model;
+      umbrelHasApiKey = true;
+    } else if (remote.not_configured) {
+      configError =
+        "No xAI API key saved in the Recipes app. Add one under Add new device.";
+    } else if (remote.error) {
+      configError = remote.error;
+    }
+  }
+
+  return { apiKey, model, umbrelHasApiKey, configError };
+}
+
 async function getSettings() {
-  const { apiKey, model, umbrelUrl, umbrelToken } = await chrome.storage.local.get([
-    "apiKey",
-    "model",
-    "umbrelUrl",
-    "umbrelToken",
-  ]);
-  const normalized = normalizeUmbrelUrl(umbrelUrl || "");
+  const local = await chrome.storage.local.get(["umbrelUrl", "umbrelToken"]);
+  const normalized = normalizeUmbrelUrl(local.umbrelUrl || "");
+  const umbrelToken = (local.umbrelToken || "").trim();
+  const credentials = await resolveApiCredentials(normalized.url, umbrelToken);
   return {
-    apiKey: apiKey || "",
-    model: model || DEFAULT_MODEL,
+    apiKey: credentials.apiKey,
+    model: credentials.model,
+    umbrelHasApiKey: credentials.umbrelHasApiKey,
+    configError: credentials.configError,
     umbrelUrl: normalized.url,
     umbrelUrlError: normalized.error,
-    umbrelToken: (umbrelToken || "").trim(),
+    umbrelToken,
   };
 }
 
@@ -32,7 +59,23 @@ ${raw.text}`;
 async function formatRecipe(rawData) {
   const { apiKey, model } = await getSettings();
   if (!apiKey) {
-    return { ok: false, error: "API key not set. Open extension options to add your xAI key." };
+    const { umbrelUrl, umbrelToken, umbrelUrlError, configError } = await getSettings();
+    if (umbrelUrlError) {
+      return { ok: false, error: umbrelUrlError };
+    }
+    if (!umbrelUrl || !umbrelToken) {
+      return {
+        ok: false,
+        error:
+          "Extension is not connected to Umbrel. Add your Recipes URL and ingest token in extension Settings.",
+      };
+    }
+    return {
+      ok: false,
+      error:
+        configError ||
+        "No xAI API key saved in the Recipes app. Add one under Add new device.",
+    };
   }
 
   const response = await fetch("https://api.x.ai/v1/chat/completions", {
@@ -61,7 +104,10 @@ async function formatRecipe(rawData) {
   if (!response.ok) {
     const body = await response.text();
     if (response.status === 401) {
-      return { ok: false, error: "Invalid API key. Check your xAI key in Options." };
+      return {
+        ok: false,
+        error: "Invalid xAI API key saved in the Recipes app. Update it under Add new device.",
+      };
     }
     if (response.status === 429) {
       return { ok: false, error: "Rate limited by xAI. Wait a moment and try again." };
@@ -125,10 +171,29 @@ async function saveToUmbrel(recipe) {
       return { ok: false, error: "Invalid Umbrel ingest token. Copy a fresh token from the Recipes app." };
     }
     if (!response.ok) {
-      const body = await response.text();
+      const raw = await response.text();
+      let payload = null;
+      try {
+        payload = JSON.parse(raw);
+      } catch {
+        payload = null;
+      }
+      if (payload?.blocked) {
+        return {
+          ok: false,
+          blocked: true,
+          title: payload.title || null,
+          error:
+            payload.error ||
+            (payload.title
+              ? `“${payload.title}” is on your blocklist. Unblock it in the Recipes app to save or print it again.`
+              : "This recipe is on your blocklist. Unblock it in the Recipes app to save or print it again."),
+        };
+      }
+      const body = payload ? JSON.stringify(payload) : raw;
       return {
         ok: false,
-        error: `Umbrel save failed (${response.status}): ${body.slice(0, 160)}`,
+        error: `Umbrel save failed (${response.status}): ${String(body).slice(0, 160)}`,
       };
     }
 
@@ -167,6 +232,21 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  if (message?.type === "CHECK_RECIPE_BLOCKED") {
+    getSettings()
+      .then((settings) =>
+        checkRecipeBlocked(settings.umbrelUrl, settings.umbrelToken, message.sourceUrl || "")
+      )
+      .then(sendResponse)
+      .catch((err) => {
+        sendResponse({
+          blocked: false,
+          error: err?.message || "Could not check the blocklist.",
+        });
+      });
+    return true;
+  }
+
   if (message?.type === "GET_UMBREL_STATUS") {
     getSettings()
       .then(async (settings) => {
@@ -175,6 +255,27 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         sendResponse({ configured, permitted, umbrelUrl: settings.umbrelUrl });
       })
       .catch(() => sendResponse({ configured: false, permitted: false }));
+    return true;
+  }
+
+  if (message?.type === "GET_EXTENSION_STATUS") {
+    getSettings()
+      .then((settings) => {
+        sendResponse({
+          hasApiKey: Boolean(settings.apiKey),
+          umbrelConfigured: Boolean(settings.umbrelUrl && settings.umbrelToken),
+          umbrelHasApiKey: settings.umbrelHasApiKey,
+          configError: settings.configError,
+        });
+      })
+      .catch(() =>
+        sendResponse({
+          hasApiKey: false,
+          umbrelConfigured: false,
+          umbrelHasApiKey: false,
+          configError: null,
+        }),
+      );
     return true;
   }
 
