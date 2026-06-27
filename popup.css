@@ -27,23 +27,44 @@ header p {
   line-height: 1.4;
 }
 
-.primary-btn {
+.button-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.primary-btn,
+.secondary-btn {
   width: 100%;
   border: none;
   border-radius: 10px;
-  padding: 12px 14px;
-  font-size: 14px;
+  padding: 12px 10px;
+  font-size: 13px;
   font-weight: 600;
+  cursor: pointer;
+}
+
+.primary-btn {
   color: #fff;
   background: #e67e22;
-  cursor: pointer;
 }
 
 .primary-btn:hover:not(:disabled) {
   background: #d35400;
 }
 
-.primary-btn:disabled {
+.secondary-btn {
+  color: #9a3412;
+  background: #fff;
+  border: 1px solid #f0c9a6;
+}
+
+.secondary-btn:hover:not(:disabled) {
+  background: #fff7ed;
+}
+
+.primary-btn:disabled,
+.secondary-btn:disabled {
   opacity: 0.65;
   cursor: wait;
 }

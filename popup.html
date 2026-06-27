@@ -10,7 +10,7 @@
     <main class="popup">
       <header>
         <h1>Recipe Printer</h1>
-        <p>Format the current page with Grok and print a clean copy.</p>
+        <p>Format the current page with Grok, save to your library, or print a clean copy.</p>
       </header>
 
       <div id="setup-warning" class="warning hidden">
@@ -18,7 +18,10 @@
         <button id="open-options" type="button" class="link-btn">Open Settings</button>
       </div>
 
-      <button id="print-btn" type="button" class="primary-btn">Format, Save &amp; Print</button>
+      <div class="button-row">
+        <button id="save-later-btn" type="button" class="secondary-btn">Save for later</button>
+        <button id="save-print-btn" type="button" class="primary-btn">Save &amp; print</button>
+      </div>
 
       <p id="umbrel-hint" class="umbrel-hint hidden"></p>
       <p id="status" class="status" aria-live="polite"></p>

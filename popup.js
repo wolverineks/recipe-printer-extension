@@ -1,13 +1,22 @@
-const printBtn = document.getElementById("print-btn");
+const saveLaterBtn = document.getElementById("save-later-btn");
+const savePrintBtn = document.getElementById("save-print-btn");
 const statusEl = document.getElementById("status");
 const umbrelHint = document.getElementById("umbrel-hint");
 const setupWarning = document.getElementById("setup-warning");
 const openOptionsBtn = document.getElementById("open-options");
 const settingsLink = document.getElementById("settings-link");
 
+const actionButtons = [saveLaterBtn, savePrintBtn];
+
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
   statusEl.classList.toggle("error", isError);
+}
+
+function setButtonsDisabled(disabled) {
+  for (const button of actionButtons) {
+    button.disabled = disabled;
+  }
 }
 
 function openOptions() {
@@ -61,8 +70,8 @@ async function openPrintPage(recipe) {
   await chrome.tabs.create({ url });
 }
 
-async function handlePrint() {
-  printBtn.disabled = true;
+async function processRecipe({ shouldPrint }) {
+  setButtonsDisabled(true);
   setStatus("Extracting recipe from page…");
 
   try {
@@ -85,7 +94,7 @@ async function handlePrint() {
     const blockCheck = await checkBlocked(extracted.data.url);
     if (blockCheck?.blocked) {
       setStatus(blockedStatusMessage(blockCheck), true);
-      printBtn.disabled = false;
+      setButtonsDisabled(false);
       return;
     }
     if (blockCheck?.error) {
@@ -105,13 +114,26 @@ async function handlePrint() {
       ...(extracted.data.image_url ? { image_url: extracted.data.image_url } : {}),
     };
     const saved = await saveToUmbrel(recipeForUmbrel);
-    let keepOpen = false;
 
     if (saved?.blocked) {
       setStatus(blockedStatusMessage(saved), true);
-      printBtn.disabled = false;
+      setButtonsDisabled(false);
       return;
     }
+
+    if (!shouldPrint) {
+      if (saved?.skipped) {
+        throw new Error("Connect Umbrel in extension Settings to save recipes for later.");
+      }
+      if (!saved?.ok) {
+        throw new Error(saved?.error || "Umbrel save failed.");
+      }
+      setStatus("Saved to Umbrel for later.");
+      window.close();
+      return;
+    }
+
+    let keepOpen = false;
 
     if (saved?.ok) {
       setStatus("Saved to Umbrel. Opening print preview…");
@@ -126,26 +148,28 @@ async function handlePrint() {
     await openPrintPage(formatted.data);
 
     if (keepOpen) {
-      printBtn.disabled = false;
+      setButtonsDisabled(false);
       return;
     }
 
     window.close();
   } catch (err) {
     setStatus(err.message || "Something went wrong.", true);
-    printBtn.disabled = false;
+    setButtonsDisabled(false);
   }
 }
 
 async function loadUmbrelHint() {
   const status = await chrome.runtime.sendMessage({ type: "GET_UMBREL_STATUS" });
   if (!status?.configured) {
-    umbrelHint.textContent = "Tip: in the Recipes app click Add new device, then paste URL + token into extension Settings.";
+    umbrelHint.textContent =
+      "Tip: connect Umbrel in Settings to use Save for later. Save & print works without saving.";
     umbrelHint.classList.remove("hidden");
     return;
   }
   if (!status.permitted) {
-    umbrelHint.textContent = "Umbrel is configured but Chrome network access is not allowed yet. Open Settings, click Save, and choose Allow.";
+    umbrelHint.textContent =
+      "Umbrel is configured but Chrome network access is not allowed yet. Open Settings, click Save, and choose Allow.";
     umbrelHint.classList.remove("hidden");
     return;
   }
@@ -153,25 +177,36 @@ async function loadUmbrelHint() {
 }
 
 async function init() {
-  const status = await chrome.runtime.sendMessage({ type: "GET_EXTENSION_STATUS" });
-  const hasKey = Boolean(status?.hasApiKey);
+  const [extensionStatus, umbrelStatus] = await Promise.all([
+    chrome.runtime.sendMessage({ type: "GET_EXTENSION_STATUS" }),
+    chrome.runtime.sendMessage({ type: "GET_UMBREL_STATUS" }),
+  ]);
+
+  const hasKey = Boolean(extensionStatus?.hasApiKey);
+  const umbrelReady = Boolean(
+    umbrelStatus?.configured && umbrelStatus?.permitted && extensionStatus?.umbrelConfigured,
+  );
+
   setupWarning.classList.toggle("hidden", hasKey);
   if (!hasKey) {
     const warningText = setupWarning.querySelector("p");
     if (warningText) {
-      warningText.textContent = status?.umbrelConfigured
-        ? status?.configError ||
+      warningText.textContent = extensionStatus?.umbrelConfigured
+        ? extensionStatus?.configError ||
           "No xAI API key saved in the Recipes app. Add one under Add new device."
         : "Connect Umbrel in extension Settings, then save the xAI API key in Recipes → Add new device.";
     }
   }
-  printBtn.disabled = !hasKey;
+
+  savePrintBtn.disabled = !hasKey;
+  saveLaterBtn.disabled = !hasKey || !umbrelReady;
 
   await loadUmbrelHint();
 
   openOptionsBtn.addEventListener("click", openOptions);
   settingsLink.addEventListener("click", openOptions);
-  printBtn.addEventListener("click", handlePrint);
+  saveLaterBtn.addEventListener("click", () => processRecipe({ shouldPrint: false }));
+  savePrintBtn.addEventListener("click", () => processRecipe({ shouldPrint: true }));
 }
 
 init();
