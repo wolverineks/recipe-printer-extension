@@ -211,8 +211,8 @@ async function init() {
     if (warningText) {
       warningText.textContent = extensionStatus?.umbrelConfigured
         ? extensionStatus?.configError ||
-          "No xAI API key saved in the Recipes app. Add one under Add new device."
-        : "Connect Umbrel in extension Settings, then save the xAI API key in Recipes → Add new device.";
+          "No xAI API key saved in the Recipes app. Add one under Setup."
+        : "Connect Umbrel in extension Settings, then save the xAI API key in Recipes → Setup.";
     }
   }
 

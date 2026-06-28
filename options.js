@@ -37,7 +37,7 @@ async function refreshExtensionConfigStatus(url, token) {
   }
   if (config.not_configured) {
     setUmbrelStatus(
-      "Connected, but no xAI API key is saved in Recipes yet. Add one under Add new device.",
+      "Connected, but no xAI API key is saved in Recipes yet. Add one under Setup.",
       "error",
     );
     return;

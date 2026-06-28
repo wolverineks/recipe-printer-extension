@@ -22,7 +22,7 @@ async function resolveApiCredentials(umbrelUrl, umbrelToken) {
       umbrelHasApiKey = true;
     } else if (remote.not_configured) {
       configError =
-        "No xAI API key saved in the Recipes app. Add one under Add new device.";
+        "No xAI API key saved in the Recipes app. Add one under Setup.";
     } else if (remote.error) {
       configError = remote.error;
     }
@@ -74,7 +74,7 @@ async function formatRecipe(rawData) {
       ok: false,
       error:
         configError ||
-        "No xAI API key saved in the Recipes app. Add one under Add new device.",
+        "No xAI API key saved in the Recipes app. Add one under Setup.",
     };
   }
 
@@ -106,7 +106,7 @@ async function formatRecipe(rawData) {
     if (response.status === 401) {
       return {
         ok: false,
-        error: "Invalid xAI API key saved in the Recipes app. Update it under Add new device.",
+        error: "Invalid xAI API key saved in the Recipes app. Update it under Setup.",
       };
     }
     if (response.status === 429) {
